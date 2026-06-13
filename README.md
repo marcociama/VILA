@@ -20,14 +20,14 @@ This is not a niche failure mode. It is the **#1 cause of permanent crypto loss*
 ## The Insight
 
 Human memory is not good at ordered sequences of abstract words.  
-Human memory is excellent at **visual scenes**.
+Human memory is excellent at **visual scenes and spatial arrangements**.
 
-You will remember *"the scene with Bruno, grandma's ring, and my bedroom window"* in twenty years.  
+You will remember *"my marker, a tin can, and a football — arranged on my desk"* in twenty years.  
 You will not remember *"horse battery staple correct"* in twenty days.
 
-**VILA replaces the seed phrase with a personal visual scene.**  
+**VILA replaces the seed phrase with a scene of ordinary, unrelated objects.**  
 No paper. No sequence. No typos possible.  
-Your recovery key lives in your memory and in the physical world of your objects.
+Your recovery key lives in the spatial arrangement of objects — not in a string, not in a file.
 
 ---
 
@@ -74,9 +74,11 @@ your scene photo
 ```
 
 No training. No fine-tuning. No custom loss function.  
-The pretrained ViT already understands semantic visual content.  
-Two photos of the same scene → similar vectors → same wallet.  
-Two photos of different scenes → distant vectors → different wallet.
+The pretrained ViT encodes the full visual composition: shapes, textures, colors, and spatial relationships between objects.  
+Two photos of the same arrangement (different angle, different lighting) → similar vectors → same wallet.  
+Two photos of different arrangements → distant vectors → access denied.
+
+**Threshold flexibility is by design.** You don't need to reproduce the exact photo — you just need your objects in frame. Small variations in angle, lighting, and distance stay within the cosine similarity threshold. The ViT is tolerant of the natural variation in how you photograph a scene, but intolerant of a different scene entirely.
 
 **We build only the encoder and the vault mechanism.**  
 Key derivation, signing, and blockchain interaction use standard BIP-32 infrastructure unchanged.
@@ -89,7 +91,7 @@ When VILA authenticates you, it shows **which regions of your scene drove the la
 
 You don't just get access. You see *why* you got access:
 
-> "Bruno ✓ &nbsp; Ring ✓ &nbsp; Window ✓"
+> "Marker ✓ &nbsp; Can ✓ &nbsp; Football ✓"
 
 No authentication system in the world offers this.  
 SHA-256 cannot tell you what it looked at. VILA can.
@@ -127,10 +129,11 @@ The vector file alone is cryptographically useless — exactly like a hardware w
 
 ## Security Properties
 
-- **No dictionary attack**: personal scenes are not in any vocabulary
-- **No enumeration**: visual latent space is continuous and infinite (R^384)
-- **No digital artifact to steal**: the secret is a physical arrangement of objects
-- **Kerckhoffs compliant**: algorithm fully public, security entirely in the personal scene
+- **No dictionary attack**: object arrangements are not in any vocabulary — knowing the objects (marker, can, football) does not help enumerate the visual configuration
+- **No enumeration**: visual latent space is continuous and infinite (R^384); the attack surface is all possible spatial compositions, not a finite word list
+- **No digital artifact to steal**: the secret is a physical arrangement in the real world
+- **Objects can be completely ordinary**: security does not require rare or personal objects — it comes from the specific, unexpected combination and arrangement
+- **Kerckhoffs compliant**: algorithm fully public, security entirely in the spatial configuration
 - **Plausible deniability**: nothing proves which scene is your key
 
 ---
