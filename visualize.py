@@ -59,13 +59,13 @@ def plot_attention_rollout(
     with torch.no_grad():
         model(img_t)
 
-    rollout   = model.get_attention_rollout()   # [1, num_patches]
+    attn_raw  = model.get_last_layer_attention()   # [1, num_patches] — sharper than rollout
     model.remove_attention_hooks()
 
-    n_patches = rollout.shape[1]
-    g         = int(n_patches ** 0.5)           # 28 for ViT-S/8 @ 224
+    n_patches = attn_raw.shape[1]
+    g         = int(n_patches ** 0.5)
 
-    attn_map  = rollout[0].numpy().reshape(g, g)
+    attn_map  = attn_raw[0].numpy().reshape(g, g)
     attn_map  = (attn_map - attn_map.min()) / (attn_map.max() - attn_map.min() + 1e-8)
 
     attn_up   = F.interpolate(
@@ -75,18 +75,25 @@ def plot_attention_rollout(
 
     img_show  = _denorm(img_np)
 
+    # Highlighted overlay: blend image with yellow tint on high-attention regions
+    highlight = np.zeros_like(img_show)
+    highlight[..., 0] = 1.0   # R
+    highlight[..., 1] = 0.85  # G  → warm yellow
+    alpha_map = attn_up[..., None] ** 0.6   # soften the falloff
+    img_highlighted = img_show * (1 - 0.65 * alpha_map) + highlight * 0.65 * alpha_map
+    img_highlighted = np.clip(img_highlighted, 0, 1)
+
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
     axes[0].imshow(img_show)
     axes[0].axis("off")
     axes[0].set_title("Input scene", fontsize=11)
 
-    axes[1].imshow(img_show)
-    axes[1].imshow(attn_up, cmap="inferno", alpha=0.55)
+    axes[1].imshow(img_highlighted)
     axes[1].axis("off")
     axes[1].set_title("What VILA sees", fontsize=11)
 
-    suptitle = title if title else "VILA — Attention Rollout"
+    suptitle = title if title else "VILA — Attention"
     fig.suptitle(
         f"{suptitle}\n\"I recognized these regions to generate your vault key\"",
         fontsize=12, fontweight="bold",
@@ -126,12 +133,12 @@ def plot_authentication_result(
     with torch.no_grad():
         model(img_t)
 
-    rollout = model.get_attention_rollout()
+    attn_raw = model.get_last_layer_attention()
     model.remove_attention_hooks()
 
-    n_patches = rollout.shape[1]
+    n_patches = attn_raw.shape[1]
     g         = int(n_patches ** 0.5)
-    attn_map  = rollout[0].numpy().reshape(g, g)
+    attn_map  = attn_raw[0].numpy().reshape(g, g)
     attn_map  = (attn_map - attn_map.min()) / (attn_map.max() - attn_map.min() + 1e-8)
     attn_up   = F.interpolate(
         torch.from_numpy(attn_map).float().unsqueeze(0).unsqueeze(0),
@@ -140,14 +147,18 @@ def plot_authentication_result(
 
     img_show = _denorm(img_np)
 
+    color = np.array([0.2, 1.0, 0.4]) if granted else np.array([1.0, 0.25, 0.25])
+    alpha_map = attn_up[..., None] ** 0.6
+    img_highlighted = img_show * (1 - 0.65 * alpha_map) + color * 0.65 * alpha_map
+    img_highlighted = np.clip(img_highlighted, 0, 1)
+
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
     axes[0].imshow(img_show)
     axes[0].axis("off")
     axes[0].set_title("Input scene", fontsize=11)
 
-    axes[1].imshow(img_show)
-    axes[1].imshow(attn_up, cmap="inferno", alpha=0.55)
+    axes[1].imshow(img_highlighted)
     axes[1].axis("off")
     axes[1].set_title("Regions driving the key", fontsize=11)
 

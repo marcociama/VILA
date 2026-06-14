@@ -57,6 +57,80 @@ def similarity(v1: torch.Tensor, v2: torch.Tensor) -> float:
     return float(F.cosine_similarity(v1.unsqueeze(0), v2.unsqueeze(0)).item())
 
 
+def encode_full(
+    model: VilaEncoder,
+    image: str | Path | torch.Tensor,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Returns (cls [384], patches [N,384]) — both L2-normalised.
+    CLS used for fast global comparison; patches stored in vault for cross-attention.
+    """
+    if not isinstance(image, torch.Tensor):
+        image = load_image(image)
+    image = image.to(device)
+    model.eval()
+    with torch.no_grad():
+        cls, patches = model.encode_with_patches(image)   # [1,384], [1,N,384]
+    cls     = F.normalize(cls[0],     dim=-1).cpu()       # [384]
+    patches = F.normalize(patches[0], dim=-1).cpu()       # [N,384]
+    return cls, patches
+
+
+def cross_attention_sim(
+    patches_reg: torch.Tensor,   # [N,384]  — registration patches (SAM-cleaned)
+    patches_auth: torch.Tensor,  # [M,384]  — authentication patches (raw)
+    top_k_frac: float = 0.35,
+) -> float:
+    """
+    For each registration patch, find the most similar auth patch.
+    Returns the mean best-match similarity across the top-K reg patches
+    (ranked by attention score, i.e. the most-attended registration regions).
+    Stays entirely in R^384 — no dictionary, not brute-forceable.
+    """
+    # similarity matrix [N, M]
+    sim_matrix = patches_reg @ patches_auth.T          # [N, M]
+    best_match = sim_matrix.max(dim=1).values          # [N]  best auth patch per reg patch
+
+    # Focus on the top-K most discriminative reg patches
+    K = max(1, int(len(patches_reg) * top_k_frac))
+    top_vals, _ = best_match.topk(K)
+    return float(top_vals.mean())
+
+
+def authenticate(
+    model: VilaEncoder,
+    image: str | Path | torch.Tensor,
+    device: torch.device,
+    top_k_frac: float = 0.35,
+) -> torch.Tensor:
+    """
+    Foreground-aware encoding: attention-weighted average of top-K patch tokens.
+    Background-invariant — focuses on the most attended (salient) regions.
+    top_k_frac: fraction of patches to keep (default 35% of 256 = ~90 patches).
+    """
+    if not isinstance(image, torch.Tensor):
+        image = load_image(image)
+    image = image.to(device)
+
+    model.eval()
+    model.register_attention_hooks()
+    model.clear_attention_maps()
+
+    with torch.no_grad():
+        _, patches = model.encode_with_patches(image)   # [B, N, 384]
+
+    rollout = model.get_attention_rollout()              # [B, N]
+    model.remove_attention_hooks()
+
+    N = patches.shape[1]
+    K = max(1, int(N * top_k_frac))
+    topk_idx = rollout[0].topk(K).indices               # [K] highest-attention patches
+
+    fg_feat = patches[0][topk_idx].mean(dim=0)          # [384]
+    return F.normalize(fg_feat, dim=-1).cpu()
+
+
 def authenticate(
     vector_new: torch.Tensor,
     vector_saved: torch.Tensor,

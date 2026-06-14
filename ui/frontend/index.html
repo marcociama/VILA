@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VILA — Visual Wallet Recovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:    #2563EB;
+      --blue-lt: #EFF6FF;
+      --green:   #16A34A;
+      --red:     #DC2626;
+      --gray-50: #F9FAFB;
+      --gray-100:#F3F4F6;
+      --gray-200:#E5E7EB;
+      --gray-500:#6B7280;
+      --gray-700:#374151;
+      --gray-900:#111827;
+      --radius:  12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--gray-900);
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .nav-logo { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; color: var(--gray-900); }
+    .nav-logo span { color: var(--blue); }
+    nav ul { display: flex; gap: 32px; list-style: none; }
+    nav ul a { text-decoration: none; font-size: .9rem; font-weight: 500; color: var(--gray-700); transition: color .15s; }
+    nav ul a:hover { color: var(--blue); }
+
+    /* ── SECTIONS ── */
+    section { padding: 96px 48px; max-width: 1100px; margin: 0 auto; }
+    .section-alt { background: var(--gray-50); max-width: none; padding: 96px 0; }
+    .section-alt > .inner { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
+
+    /* ── HERO ── */
+    #hero {
+      padding: 120px 48px 96px;
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 24px;
+    }
+    .tag {
+      display: inline-block;
+      background: var(--blue-lt); color: var(--blue);
+      font-size: .8rem; font-weight: 600; letter-spacing: .5px;
+      padding: 4px 12px; border-radius: 99px;
+    }
+    h1 {
+      font-size: clamp(3rem, 6vw, 5rem);
+      font-weight: 900; letter-spacing: -2px; line-height: 1.05;
+      color: var(--gray-900);
+    }
+    h1 span { color: var(--blue); }
+    .hero-sub {
+      font-size: 1.25rem; color: var(--gray-500); max-width: 560px;
+      font-weight: 400;
+    }
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--blue); color: #fff;
+      padding: 14px 28px; border-radius: var(--radius);
+      font-weight: 600; font-size: 1rem; text-decoration: none;
+      transition: opacity .15s;
+    }
+    .hero-cta:hover { opacity: .88; }
+
+    /* ── PROBLEM ── */
+    .stat { font-size: clamp(3.5rem, 8vw, 6rem); font-weight: 900; color: var(--red); letter-spacing: -3px; line-height: 1; }
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+    .problem-text h2 { font-size: 2rem; font-weight: 800; margin-bottom: 16px; letter-spacing: -1px; }
+    .problem-text p { color: var(--gray-500); font-size: 1.05rem; }
+    .problem-text p + p { margin-top: 12px; }
+
+    /* ── HOW IT WORKS ── */
+    h2.section-title { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    .section-sub { color: var(--gray-500); margin-bottom: 48px; font-size: 1.05rem; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .step {
+      background: #fff; border: 1px solid var(--gray-200);
+      border-radius: var(--radius); padding: 32px 24px;
+    }
+    .step-icon { font-size: 2rem; margin-bottom: 16px; }
+    .step-num { font-size: .75rem; font-weight: 700; color: var(--blue); letter-spacing: 1px; margin-bottom: 8px; }
+    .step h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: .9rem; color: var(--gray-500); }
+
+    /* ── DEMO ── */
+    #demo { padding: 96px 48px; max-width: 1100px; margin: 0 auto; }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .upload-card {
+      border: 2px dashed var(--gray-200); border-radius: var(--radius);
+      padding: 32px 24px; text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s; position: relative;
+    }
+    .upload-card:hover, .upload-card.drag { border-color: var(--blue); background: var(--blue-lt); }
+    .upload-card.done { border-color: var(--green); border-style: solid; }
+    .upload-card input[type=file] { display: none; }
+    .upload-icon { font-size: 2rem; margin-bottom: 12px; }
+    .upload-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .upload-card p { font-size: .85rem; color: var(--gray-500); }
+    .upload-preview {
+      width: 100%; border-radius: 8px; margin-top: 16px;
+      display: none; object-fit: cover; max-height: 200px;
+    }
+    .step-badge {
+      display: inline-block; background: var(--blue); color: #fff;
+      font-size: .7rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 99px; margin-bottom: 12px;
+    }
+
+    /* register button */
+    .btn-register {
+      margin-top: 12px; width: 100%;
+      background: var(--gray-900); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 12px; font-size: .95rem; font-weight: 600;
+      cursor: pointer; transition: opacity .15s; display: none;
+    }
+    .btn-register:hover { opacity: .8; }
+
+    /* auth button */
+    #btn-auth {
+      margin-top: 24px; width: 100%;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 16px; font-size: 1.05rem; font-weight: 700;
+      cursor: pointer; transition: opacity .15s; display: none;
+      letter-spacing: .2px;
+    }
+    #btn-auth:hover { opacity: .88; }
+    #btn-auth:disabled { opacity: .5; cursor: default; }
+
+    /* rollout result */
+    .rollout-container { margin-top: 16px; display: none; }
+    .rollout-label { font-size: .75rem; font-weight: 600; color: var(--gray-500); letter-spacing: .5px; margin-bottom: 8px; }
+    .rollout-container img { width: 100%; border-radius: 8px; border: 1px solid var(--gray-200); }
+
+    /* verdict */
+    #verdict {
+      margin-top: 32px; border-radius: var(--radius);
+      padding: 32px 36px; display: none; align-items: center; gap: 24px;
+      animation: fadeUp .35s ease;
+    }
+    #verdict.granted { background: #F0FDF4; border: 1.5px solid #86EFAC; }
+    #verdict.denied  { background: #FEF2F2; border: 1.5px solid #FCA5A5; }
+    .verdict-icon { font-size: 2.5rem; flex-shrink: 0; }
+    .verdict-text h3 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+    .verdict-text.granted h3 { color: var(--green); }
+    .verdict-text.denied  h3 { color: var(--red); }
+    .verdict-text p { font-size: .9rem; color: var(--gray-500); margin-top: 4px; }
+    .sim-bar-wrap { margin-top: 8px; }
+    .sim-bar-bg { height: 6px; background: var(--gray-200); border-radius: 99px; overflow: hidden; }
+    .sim-bar { height: 100%; border-radius: 99px; transition: width .6s ease; }
+    .sim-bar.granted { background: var(--green); }
+    .sim-bar.denied  { background: var(--red); }
+
+    #verdict-rollout { margin-top: 20px; display: none; }
+    #verdict-rollout .rollout-label { text-align: center; margin-bottom: 12px; }
+    #verdict-rollout img { width: 100%; border-radius: 8px; border: 1px solid var(--gray-200); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+    .compare-table th { text-align: left; padding: 12px 16px; font-weight: 700; border-bottom: 2px solid var(--gray-200); }
+    .compare-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+    .compare-table tr:hover td { background: var(--gray-50); }
+    .compare-table .col-vila { color: var(--blue); font-weight: 600; }
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: var(--red); font-weight: 700; }
+
+    /* ── SECURITY ── */
+    .security-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .security-item {
+      background: #fff; border: 1px solid var(--gray-200);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .security-item h4 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+    .security-item p { font-size: .875rem; color: var(--gray-500); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--gray-200);
+      padding: 40px 48px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: .875rem; color: var(--gray-500);
+    }
+    footer strong { color: var(--gray-900); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite; vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── registered badge ── */
+    .registered-badge {
+      display: none; margin-top: 12px;
+      background: #F0FDF4; border: 1px solid #86EFAC;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: .875rem; color: var(--green); font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-logo">VI<span>LA</span></div>
+  <ul>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#demo">Live demo</a></li>
+    <li><a href="#compare">vs BIP-39</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="tag">AI × Web3 — ctrl/shift Hackathon 2026</div>
+  <h1>Your memory<br/>is your <span>backup.</span></h1>
+  <p class="hero-sub">
+    Replace your seed phrase with a photo of ordinary objects.
+    The AI sees what you see. No paper. No sequence. No loss.
+  </p>
+  <a href="#demo" class="hero-cta">Try the live demo ↓</a>
+</section>
+
+<!-- ── PROBLEM ── -->
+<div class="section-alt" id="problem">
+  <div class="inner">
+    <div class="problem-grid">
+      <div>
+        <div class="stat">$300B</div>
+        <div style="margin-top:8px; font-size:1.1rem; font-weight:600; color:var(--gray-500)">permanently lost.</div>
+      </div>
+      <div class="problem-text">
+        <h2>One reason.<br/>Seed phrases.</h2>
+        <p>20% of all Bitcoin in existence is inaccessible — not stolen, not hacked. Lost because the owner misplaced 12 words written on a piece of paper years ago.</p>
+        <p>BIP-39 demands perfect sequential memory of random abstract words. Humans are not built for that. We are built for <strong>visual scenes</strong>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how">
+  <h2 class="section-title">How VILA works</h2>
+  <p class="section-sub">Three objects. One photo. Your wallet, forever recoverable.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-icon">📷</div>
+      <div class="step-num">STEP 01</div>
+      <h3>Photograph your scene</h3>
+      <p>Place three ordinary, unrelated objects together — a marker, a can, a ball. Photograph them. That arrangement is your key.</p>
+    </div>
+    <div class="step">
+      <div class="step-icon">🧠</div>
+      <div class="step-num">STEP 02</div>
+      <h3>ViT encodes the scene</h3>
+      <p>A frozen Vision Transformer processes the image into a 384-dimensional latent vector. No training. No personal data stored.</p>
+    </div>
+    <div class="step">
+      <div class="step-icon">🔑</div>
+      <div class="step-num">STEP 03</div>
+      <h3>Vector becomes key</h3>
+      <p>The vector is passed to standard BIP-32 derivation. Your wallet address is derived. On recovery: same objects → same vector → same wallet.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── LIVE DEMO ── -->
+<div class="section-alt" id="demo-wrapper">
+  <div class="inner">
+    <div id="demo">
+      <h2 class="section-title">Live demo</h2>
+      <p class="section-sub">Register a scene, then authenticate with a new photo of the same objects.</p>
+
+      <div class="demo-grid">
+
+        <!-- STEP 1: REGISTER -->
+        <div>
+          <div class="upload-card" id="card-reg" onclick="document.getElementById('file-reg').click()">
+            <input type="file" id="file-reg" accept="image/*" />
+            <div class="step-badge">STEP 1</div>
+            <div class="upload-icon">🖼️</div>
+            <h3>Registration photo</h3>
+            <p>Your objects, arranged. This creates the vault.</p>
+            <img class="upload-preview" id="preview-reg" alt="preview" />
+          </div>
+          <input
+            type="text" id="objects-input"
+            placeholder="Name your objects: book pen highlighter"
+            style="display:none; margin-top:10px; width:100%; padding:10px 14px;
+                   border:1px solid var(--gray-200); border-radius:8px;
+                   font-family:inherit; font-size:.9rem; outline:none;"
+            oninput="updateRegBtn()"
+          />
+          <p id="objects-hint" style="display:none; font-size:.78rem; color:var(--gray-500); margin-top:6px;">
+            Any order, any case — and place objects on a contrasting background (white table, empty desk).
+          </p>
+          <button class="btn-register" id="btn-reg">Register scene</button>
+          <div class="registered-badge" id="reg-badge">✓ Scene registered — vault ready</div>
+          <div class="rollout-container" id="rollout-reg">
+            <div class="rollout-label">WHAT THE AI SAW (REGISTRATION)</div>
+            <img id="img-rollout-reg" alt="attention rollout" />
+          </div>
+        </div>
+
+        <!-- STEP 2: AUTHENTICATE -->
+        <div>
+          <div class="upload-card" id="card-auth" onclick="document.getElementById('file-auth').click()">
+            <input type="file" id="file-auth" accept="image/*" />
+            <div class="step-badge">STEP 2</div>
+            <div class="upload-icon">📸</div>
+            <h3>Authentication photo</h3>
+            <p>Same objects, new photo — contrasting background works best.</p>
+            <img class="upload-preview" id="preview-auth" alt="preview" />
+          </div>
+          <button id="btn-auth" disabled>Authenticate →</button>
+        </div>
+      </div>
+
+      <!-- VERDICT -->
+      <div id="verdict">
+        <div class="verdict-icon" id="verdict-icon"></div>
+        <div class="verdict-text" id="verdict-text">
+          <h3 id="verdict-title"></h3>
+          <p id="verdict-sim"></p>
+          <div class="sim-bar-wrap">
+            <div class="sim-bar-bg"><div class="sim-bar" id="sim-bar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="verdict-rollout">
+        <div class="rollout-label" style="text-align:center">WHAT THE AI SAW (AUTHENTICATION)</div>
+        <img id="img-rollout-auth" alt="attention rollout auth" />
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── VS BIP-39 ── -->
+<section id="compare">
+  <h2 class="section-title">VILA vs BIP-39 vs passphrase</h2>
+  <p class="section-sub">The same cryptographic output. A fundamentally different input method.</p>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>BIP-39</th>
+        <th>Custom passphrase</th>
+        <th class="col-vila">VILA</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Exact order required</td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td class="col-vila"><span class="check">✓ No</span></td>
+      </tr>
+      <tr>
+        <td>Forgettable?</td>
+        <td><span class="cross">✗ Very</span></td>
+        <td><span class="cross">✗ Somewhat</span></td>
+        <td class="col-vila"><span class="check">✓ No — episodic memory</span></td>
+      </tr>
+      <tr>
+        <td>Enumerable by attacker</td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td class="col-vila"><span class="check">✓ No — continuous R³⁸⁴</span></td>
+      </tr>
+      <tr>
+        <td>Can be shoulder-surfed</td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td class="col-vila"><span class="check">✓ No — scene ≠ transcription</span></td>
+      </tr>
+      <tr>
+        <td>Paper backup required</td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td><span class="cross">✗ Yes</span></td>
+        <td class="col-vila"><span class="check">✓ No</span></td>
+      </tr>
+      <tr>
+        <td>Explainability</td>
+        <td>None</td>
+        <td>None</td>
+        <td class="col-vila"><span class="check">✓ Attention rollout</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── SECURITY ── -->
+<div class="section-alt">
+  <div class="inner">
+    <h2 class="section-title" style="margin-bottom:8px">Security properties</h2>
+    <p class="section-sub">Kerckhoffs compliant. Algorithm fully public. Security entirely in the arrangement.</p>
+    <div class="security-grid">
+      <div class="security-item">
+        <h4>No dictionary attack</h4>
+        <p>Object arrangements are not in any vocabulary. Knowing the objects does not help enumerate the spatial configuration.</p>
+      </div>
+      <div class="security-item">
+        <h4>No enumeration</h4>
+        <p>Visual latent space is continuous and infinite (R³⁸⁴). The attack surface is all possible spatial compositions — not a finite word list.</p>
+      </div>
+      <div class="security-item">
+        <h4>Nothing to steal</h4>
+        <p>The secret is a physical arrangement in the real world. The vault file is encrypted and useless without the matching scene.</p>
+      </div>
+      <div class="security-item">
+        <h4>Explainable authentication</h4>
+        <p>Attention rollout shows exactly which regions drove the key. You see why you were granted access — no black box.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div><strong>VILA</strong> — Visual Interactive Latent Alignment</div>
+  <div>Built at <strong>ctrl/shift Hackathon 2026</strong></div>
+</footer>
+
+<script>
+  // ── state ──
+  let vaultB64 = null;
+  let authFileReady = false;
+
+  // ── drag & drop helpers ──
+  function setupDrop(card, input) {
+    card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag'));
+    card.addEventListener('drop', e => {
+      e.preventDefault(); card.classList.remove('drag');
+      if (e.dataTransfer.files[0]) { input.files = e.dataTransfer.files; input.dispatchEvent(new Event('change')); }
+    });
+  }
+  setupDrop(document.getElementById('card-reg'),  document.getElementById('file-reg'));
+  setupDrop(document.getElementById('card-auth'), document.getElementById('file-auth'));
+
+  // ── preview helpers ──
+  function showPreview(inputId, previewId) {
+    const file = document.getElementById(inputId).files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById(previewId);
+      img.src = e.target.result;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateRegBtn() {
+    const hasFile = document.getElementById('file-reg').files.length > 0;
+    document.getElementById('btn-reg').style.display = hasFile ? 'block' : 'none';
+  }
+
+  // ── STEP 1: file selected ──
+  document.getElementById('file-reg').addEventListener('change', () => {
+    showPreview('file-reg', 'preview-reg');
+    document.getElementById('objects-input').style.display = 'block';
+    document.getElementById('objects-hint').style.display = 'block';
+    document.getElementById('card-reg').classList.remove('done');
+    updateRegBtn();
+  });
+
+  // ── STEP 1: register ──
+  document.getElementById('btn-reg').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const file = document.getElementById('file-reg').files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('btn-reg');
+    btn.innerHTML = '<span class="spinner"></span>Encoding scene…';
+    btn.disabled = true;
+
+    const objects = document.getElementById('objects-input').value.trim();
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('objects', objects);
+
+    try {
+      const res = await fetch('/api/register', { method: 'POST', body: fd });
+      const data = await res.json();
+      vaultB64 = data.vault_b64;
+
+      document.getElementById('card-reg').classList.add('done');
+      document.getElementById('reg-badge').style.display = 'block';
+
+      const rc = document.getElementById('rollout-reg');
+      document.getElementById('img-rollout-reg').src = 'data:image/png;base64,' + data.rollout_b64;
+      rc.style.display = 'block';
+
+      updateAuthBtn();
+    } catch(err) {
+      alert('Registration failed: ' + err.message);
+    } finally {
+      btn.textContent = 'Re-register scene';
+      btn.disabled = false;
+    }
+  });
+
+  // ── STEP 2: file selected ──
+  document.getElementById('file-auth').addEventListener('change', () => {
+    showPreview('file-auth', 'preview-auth');
+    authFileReady = true;
+    updateAuthBtn();
+    document.getElementById('card-auth').classList.remove('done');
+    // reset verdict
+    document.getElementById('verdict').style.display = 'none';
+    document.getElementById('verdict-rollout').style.display = 'none';
+  });
+
+  function updateAuthBtn() {
+    const btn = document.getElementById('btn-auth');
+    btn.style.display = 'block';
+    btn.disabled = !(vaultB64 && authFileReady);
+  }
+
+  // ── STEP 2: authenticate ──
+  document.getElementById('btn-auth').addEventListener('click', async () => {
+    const file = document.getElementById('file-auth').files[0];
+    if (!file || !vaultB64) return;
+
+    const btn = document.getElementById('btn-auth');
+    btn.innerHTML = '<span class="spinner"></span>Authenticating…';
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('vault_b64', vaultB64);
+
+    try {
+      const res  = await fetch('/api/auth', { method: 'POST', body: fd });
+      const data = await res.json();
+      showVerdict(data);
+    } catch(err) {
+      alert('Authentication failed: ' + err.message);
+    } finally {
+      btn.innerHTML = 'Authenticate →';
+      btn.disabled = false;
+    }
+  });
+
+  function showVerdict(data) {
+    const { granted, similarity, threshold } = data;
+
+    const verdict = document.getElementById('verdict');
+    verdict.className = granted ? 'granted' : 'denied';
+    verdict.style.display = 'flex';
+
+    document.getElementById('verdict-icon').textContent = granted ? '✅' : '❌';
+
+    const vt = document.getElementById('verdict-text');
+    vt.className = 'verdict-text ' + (granted ? 'granted' : 'denied');
+    document.getElementById('verdict-title').textContent = granted ? 'ACCESS GRANTED' : 'ACCESS DENIED';
+    document.getElementById('verdict-sim').textContent =
+      `Similarity: ${similarity.toFixed(3)} / threshold: ${threshold}`;
+
+    const bar = document.getElementById('sim-bar');
+    bar.className = 'sim-bar ' + (granted ? 'granted' : 'denied');
+    bar.style.width = Math.min(similarity * 100, 100) + '%';
+
+    const vr = document.getElementById('verdict-rollout');
+    document.getElementById('img-rollout-auth').src = 'data:image/png;base64,' + data.rollout_b64;
+    vr.style.display = 'block';
+
+    verdict.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+</body>
+</html>
