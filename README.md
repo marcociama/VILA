@@ -1,7 +1,7 @@
 # VILA
 ### Visual Interactive Latent Alignment
 
-> *Your memory is your backup.*
+> *Your personal object is your password.*
 
 ---
 
@@ -20,14 +20,14 @@ This is not a niche failure mode. It is the **#1 cause of permanent crypto loss*
 ## The Insight
 
 Human memory is not good at ordered sequences of abstract words.  
-Human memory is excellent at **visual scenes and spatial arrangements**.
+Human memory is excellent at **personal objects**.
 
-You will remember *"my marker, a tin can, and a football — arranged on my desk"* in twenty years.  
+You will remember your childhood plushie, your custom photo frame, your unique travel souvenir — in twenty years.  
 You will not remember *"horse battery staple correct"* in twenty days.
 
-**VILA replaces the seed phrase with a scene of ordinary, unrelated objects.**  
-No paper. No sequence. No typos possible.  
-Your recovery key lives in the spatial arrangement of objects — not in a string, not in a file.
+**VILA replaces the seed phrase with a personal object.**  
+Point the camera at something only you own. You're in.  
+No paper. No sequence. No typos possible.
 
 ---
 
@@ -35,142 +35,128 @@ Your recovery key lives in the spatial arrangement of objects — not in a strin
 
 ```
 DAILY USE
-  Encrypted vault file (stored locally or on USB)
+  Encrypted vault (stored locally or on USB)
   PIN / biometric → decrypts vault → derives private key → wallet accessible
 
 RECOVERY (lost or broken device)
-  Photograph your personal scene
+  Photograph your personal object
   VILA encodes it into the same latent vector
-  Import vault file on new device → wallet restored
+  Import vault on new device → wallet restored
 
 BACKUP
-  Export encrypted vault to USB drive
-  Store it anywhere — useless without your scene
+  Export encrypted vault to USB
+  Store anywhere — useless without your object
 ```
 
-The secret is **never a string, never a file, never a number you need to memorize**.  
+The secret is **never a string, never a file, never a number to memorize**.  
 It is computed on-device at the moment of use and immediately discarded.
 
 ---
 
 ## Architecture
 
-VILA uses a frozen **ViT-S/8** (Vision Transformer, patch size 8, pretrained on ImageNet via timm) to encode any image into a **384-dimensional latent vector**.
-
 ```
-your scene photo
+your object photo
+      │
+      ▼ (registration only)
+ GroundingDINO  ←── object names ("plushie frame coin")
       │
       ▼
- ViT-S/8 (frozen, 22M params, pretrained)
+    SAM  →  white background + bbox crop  →  normalized object image
       │
       ▼
-  [384-dim float vector]  ←  this IS the vault key
+ DINOv2 ViT-S/14  (frozen, 22M params, pretrained)
+      │
+      ├── CLS token  [384-dim]   ← global scene fingerprint
+      └── Patch tokens [256×384] ← local feature map
       │
       ▼
-  cosine similarity with saved vector
-      │
-      ▼
-  similarity ≥ threshold  →  access granted
+  vault  =  { vector: [384], patches: [256×384] }
+  (object names discarded — security)
 ```
 
-No training. No fine-tuning. No custom loss function.  
-The pretrained ViT encodes the full visual composition: shapes, textures, colors, and spatial relationships between objects.  
-Two photos of the same arrangement (different angle, different lighting) → similar vectors → same wallet.  
-Two photos of different arrangements → distant vectors → access denied.
+**At authentication (no text input, any background):**
+```
+new photo → DINOv2 → CLS_new + patches_new
+                          │
+    ┌─────────────────────┴──────────────────────┐
+    │ sim_cls   = cosine(CLS_new, CLS_vault)      │  global match
+    │ sim_xattn = cross_attention(patches_vault,  │  object-local match
+    │                             patches_new)    │
+    └─────────────────────┬──────────────────────┘
+                          │
+              combined = 0.5 × sim_cls + 0.5 × sim_xattn
+                          │
+              threshold 0.50  →  GRANTED / DENIED
+```
 
-**Threshold flexibility is by design.** You don't need to reproduce the exact photo — you just need your objects in frame. Small variations in angle, lighting, and distance stay within the cosine similarity threshold. The ViT is tolerant of the natural variation in how you photograph a scene, but intolerant of a different scene entirely.
+**Cross-attention**: for each vault patch (clean object), find the most similar patch in the auth photo. Compensates for background drift in the global CLS — the object is found even in a noisy scene.
 
-**We build only the encoder and the vault mechanism.**  
-Key derivation, signing, and blockchain interaction use standard BIP-32 infrastructure unchanged.
+No training. No fine-tuning. No custom loss function.
 
 ---
 
 ## Explainability: Attention Rollout
 
-When VILA authenticates you, it shows **which regions of your scene drove the latent vector** — the attention rollout from all 12 transformer layers.
+When VILA authenticates you, it highlights **which regions of your object drove the latent vector** — last-layer DINOv2 attention, sharp and object-focused.
 
 You don't just get access. You see *why* you got access:
 
-> "Marker ✓ &nbsp; Can ✓ &nbsp; Football ✓"
+> worn corner of the plushie ✓ &nbsp; specific color gradient ✓ &nbsp; unique texture ✓
 
 No authentication system in the world offers this.  
 SHA-256 cannot tell you what it looked at. VILA can.
 
 ---
 
+## Security Model
+
+**Two compounding layers:**
+
+| | BIP-39 | VILA |
+|---|---|---|
+| Secret type | Abstract word sequence | Physical personal object |
+| Attack space | Dictionary (~2048 words) | R^384 — continuous, infinite |
+| Brute-forceable? | Yes — C(2048,12) combinations | No — inverting a 22M-param network |
+| Enumerable from text? | Yes | No — verbal description ≠ visual features |
+| Shoulder-surfable? | Yes | No — an object cannot be transcribed |
+| Forgettable? | Very | No — episodic memory for personal objects |
+
+**Threat model (honest):**  
+VILA uses the *"something you have"* security model — identical to a YubiKey or house key.  
+If an attacker physically steals your object AND knows it is your VILA key → risk.  
+Mitigation: the object is needed only for recovery, not for daily transactions (PIN handles those).
+
+**Kerckhoffs compliant:** algorithm fully public, security entirely in the object.
+
+---
+
 ## Why Not Just a Passphrase?
 
-Some wallets support a custom passphrase instead of seed words.
+Even if you use a memorable phrase ("my red plushie"):
 
-| | Passphrase | VILA |
-|---|---|---|
-| Exact order required | Yes | No |
-| Tolerates variation | No | Yes — any angle, any lighting |
-| Lives in dictionary space | Yes — enumerable | No — lives in R^384 |
-| Can be shoulder-surfed | Yes | No — a scene cannot be transcribed |
-| Memory type required | Verbal sequential | Visual episodic (strongest) |
-
-An attacker who knows your passphrase concept can enumerate combinations in seconds.  
-An attacker who knows your scene concept must generate images that land in the correct region of a continuous 384-dimensional space — inverting a 22-million parameter neural network with no known efficient algorithm.
-
----
-
-## Why Not Just Save the Vector?
-
-The vault file stores the encrypted latent vector.  
-Without the matching scene, the encryption cannot be unlocked.  
-The vector file alone is cryptographically useless — exactly like a hardware wallet without its PIN.
-
-**Stolen phone / USB?** → Attacker has an encrypted blob. Cannot proceed without your scene.  
-**Forgotten scene?** → Same consequence as a forgotten seed phrase. User's responsibility.  
-**New phone?** → Import vault from USB, photograph your scene, restored in seconds.
-
----
-
-## Security Properties
-
-- **No dictionary attack**: object arrangements are not in any vocabulary — knowing the objects (marker, can, football) does not help enumerate the visual configuration
-- **No enumeration**: visual latent space is continuous and infinite (R^384); the attack surface is all possible spatial compositions, not a finite word list
-- **No digital artifact to steal**: the secret is a physical arrangement in the real world
-- **Objects can be completely ordinary**: security does not require rare or personal objects — it comes from the specific, unexpected combination and arrangement
-- **Kerckhoffs compliant**: algorithm fully public, security entirely in the spatial configuration
-- **Plausible deniability**: nothing proves which scene is your key
-
----
-
-## vs BIP-39 &nbsp;|&nbsp; vs unforgettable.app
-
-| | BIP-39 | unforgettable.app | VILA |
-|---|---|---|---|
-| Recovery method | 12 words, exact order | Memorable phrase | Personal visual scene |
-| Forgettable? | Very | Somewhat | No — episodic memory |
-| Order matters | Yes | Yes | No |
-| Enumerable by attacker | Yes | Yes | No |
-| Explainability | None | None | Attention rollout |
-| Paper required | Yes | Yes | No |
+- A phrase lives in **text space** — finite, enumerable, shoulder-surfable
+- VILA lives in **visual latent space** — the exact hue, wear pattern, texture, and silhouette of YOUR specific object, encoded in 384 continuous dimensions
+- A generative model cannot reproduce your object from its description
+- Even a photo of a similar object produces a completely different vector
 
 ---
 
 ## Usage
 
 ```bash
-pip install torch torchvision timm matplotlib pillow
+pip install torch torchvision timm fastapi uvicorn python-multipart \
+            transformers segment-anything pillow matplotlib
 
-# Register your scene
-python main.py register --image my_scene.jpg --vault wallet.vila
+# Run the web app (landing page + live demo)
+python ui/backend/server.py
+# → http://localhost:8000
 
-# Recover on a new device
-python main.py auth --image my_scene_new_photo.jpg --vault wallet.vila
-
-# Visualize what VILA sees
-python main.py visualize --image my_scene.jpg
-
-# Demo: compare two scenes
-python main.py demo --scene1 photo1.jpg --scene2 photo2.jpg
+# CLI (optional)
+python main.py register --image my_object.jpg --vault wallet.vila
+python main.py auth     --image my_object_new.jpg --vault wallet.vila
+python main.py visualize --image my_object.jpg
 ```
-
-Vault files (`.vila`) store the encrypted latent vector locally.  
-Back up to USB. Import on any device. Recover with your scene.
 
 ---
 
@@ -178,11 +164,18 @@ Back up to USB. Import on any device. Recover with your scene.
 
 ```
 VILA/
-├── model.py       VilaEncoder — ViT-S/8 backbone + attention rollout
-├── eval.py        encode_image, similarity, authenticate, scene_test
-├── visualize.py   plot_attention_rollout, plot_authentication_result
-├── main.py        CLI: register | auth | visualize | demo
-└── motivation.txt Full pitch and security analysis
+├── model.py         VilaEncoder — DINOv2 backbone + attention rollout
+├── eval.py          encode_image, encode_full, cross_attention_sim, authenticate
+├── visualize.py     plot_attention_rollout (last-layer, object-focused)
+├── main.py          CLI: register | auth | visualize | demo
+├── calibrate_threshold.py  Threshold calibration on STL-10 (synthetic)
+├── calibrate_real.py       Threshold calibration on real photos
+└── ui/
+    ├── backend/
+    │   ├── server.py    FastAPI — /api/register, /api/auth
+    │   └── segment.py   GroundingDINO + SAM segmentation pipeline
+    └── frontend/
+        └── index.html   Landing page + live demo (vanilla HTML/CSS/JS)
 ```
 
 ---
@@ -190,7 +183,8 @@ VILA/
 ## Dependencies
 
 ```
-torch >= 2.0  ·  torchvision >= 0.15  ·  timm >= 0.9  ·  matplotlib  ·  pillow
+torch ≥ 2.0  ·  torchvision  ·  timm ≥ 0.9  ·  transformers ≥ 5.0
+segment-anything  ·  fastapi  ·  uvicorn  ·  pillow  ·  matplotlib
 ```
 
 ---
@@ -199,9 +193,5 @@ torch >= 2.0  ·  torchvision >= 0.15  ·  timm >= 0.9  ·  matplotlib  ·  pill
 
 Built for **ctrl/shift Hackathon 2026** — Main Track: *New primitives for identity, ownership, and digital trust.*
 
-> **Build what comes after the interface.**  
-> The interface is a camera. The key is a memory.
-
----
-
-*VILA — because your home deserves a key you cannot lose.*
+> **Your personal object is your password.**  
+> The key lives in your home and in your memory — not on a piece of paper.
