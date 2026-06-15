@@ -1,4 +1,4 @@
-# VILA
+# VILA (Winning Hackaton Project)
 ### Visual Interactive Latent Alignment
 
 > *Your personal object is your password.*
